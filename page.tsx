@@ -6,6 +6,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const fetchLeads = async () => {
     if (!query) return alert("Please type something!");
@@ -21,37 +22,77 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-10 text-black">
-      <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md text-center">
-        <h1 className="text-2xl font-bold mb-4 text-blue-600">AutoLead AI 🚀</h1>
-        <input 
-          type="text" 
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search for leads..." 
-          className="w-full p-3 border rounded-md mb-4"
-        />
-        <button 
-          onClick={fetchLeads}
-          className="w-full bg-blue-500 text-white p-3 rounded-md font-semibold"
-        >
-          {loading ? "Searching..." : "Generate Leads"}
-        </button>
+    <div className="min-h-screen bg-gray-900 text-white font-sans relative">
+      {/* --- Dashboard Header --- */}
+      <nav className="bg-gray-800 p-4 border-b border-gray-700 shadow-lg">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-red-500">AutoLead AI 🚀</h1>
+          <div className="space-x-6 text-sm font-medium">
+            <span className="cursor-pointer hover:text-red-400">Overview</span>
+            <span className="cursor-pointer hover:text-red-400">Inventory</span>
+            <span className="cursor-pointer hover:text-red-400">Settings</span>
+          </div>
+        </div>
+      </nav>
 
-        <div className="mt-6 text-left">
-          {leads.map((lead: any) => (
-            <div key={lead.id} className="border-b py-2">
-              <p className="font-bold">{lead.name}</p>
-              <p className="text-sm text-gray-500">{lead.email}</p>
-            {/* Floating Chat Window */}
-<div className="fixed bottom-6 right-6 z-50">
-  <div className="bg-red-600 p-4 rounded-full shadow-lg cursor-pointer hover:bg-red-700 transition-all">
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-    </svg>
-  </div>
-  </div></div>
-          ))}
+      {/* --- Main Content --- */}
+      <main className="p-10">
+        <div className="max-w-2xl mx-auto bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700">
+          <h2 className="text-3xl font-extrabold mb-6 text-center text-white">Generate High-Quality Leads</h2>
+          
+          <div className="space-y-4">
+            <input 
+              type="text" 
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ex: Real Estate Agents in NY..." 
+              className="w-full p-4 bg-gray-900 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-red-500 transition-all"
+            />
+            <button 
+              onClick={fetchLeads}
+              className="w-full bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl font-bold text-lg shadow-lg transform active:scale-95 transition-all"
+            >
+              {loading ? "Searching Database..." : "Find Leads Now"}
+            </button>
+          </div>
+
+          {/* --- Results Section --- */}
+          <div className="mt-8">
+            {leads.length > 0 && <h3 className="text-xl font-semibold mb-4 border-b border-gray-600 pb-2">Verified Results:</h3>}
+            {leads.map((lead: any) => (
+              <div key={lead.id} className="bg-gray-900 p-4 rounded-lg mb-3 border-l-4 border-red-500 hover:bg-gray-700 transition-all">
+                <p className="font-bold text-lg">{lead.name}</p>
+                <p className="text-sm text-gray-400">{lead.email}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* --- Floating Chat System --- */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {isChatOpen && (
+          <div className="bg-white text-black w-72 h-96 rounded-2xl mb-4 shadow-2xl flex flex-col overflow-hidden border-2 border-red-600">
+            <div className="bg-red-600 p-4 text-white font-bold flex justify-between">
+              <span>AI Sales Assistant</span>
+              <button onClick={() => setIsChatOpen(false)}>✕</button>
+            </div>
+            <div className="flex-1 p-4 text-sm overflow-y-auto bg-gray-50">
+              <p className="bg-gray-200 p-2 rounded-lg mb-2">Hello! How can I help you grow your business today?</p>
+            </div>
+            <div className="p-3 border-t">
+              <input type="text" placeholder="Type a message..." className="w-full p-2 text-sm border rounded-lg outline-none" />
+            </div>
+          </div>
+        )}
+        
+        <div 
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="bg-red-600 p-4 rounded-full shadow-2xl cursor-pointer hover:bg-red-700 hover:scale-110 transition-all flex items-center justify-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
         </div>
       </div>
     </div>
