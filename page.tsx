@@ -9,13 +9,14 @@ export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const fetchLeads = async () => {
-    if (!query) return alert("Please type something!");
+    if (!query) return alert("Please enter a search term!");
     setLoading(true);
     try {
+      // Replace this URL with your actual lead generation API endpoint
       const res = await axios.get("https://jsonplaceholder.typicode.com/users");
       setLeads(res.data.slice(0, 5));
     } catch (err) {
-      alert("Error fetching data");
+      alert("Something went wrong while fetching data.");
     } finally {
       setLoading(false);
     }
@@ -28,9 +29,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold text-red-500">AutoLead AI 🚀</h1>
           <div className="space-x-6 text-sm font-medium">
-            <span className="cursor-pointer hover:text-red-400">Overview</span>
-            <span className="cursor-pointer hover:text-red-400">Inventory</span>
-            <span className="cursor-pointer hover:text-red-400">Settings</span>
+            <span className="cursor-pointer hover:text-red-400 transition-colors">Dashboard</span>
+            <span className="cursor-pointer hover:text-red-400 transition-colors">Leads Inventory</span>
+            <span className="cursor-pointer hover:text-red-400 transition-colors">Settings</span>
           </div>
         </div>
       </nav>
@@ -45,7 +46,7 @@ export default function Home() {
               type="text" 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ex: Real Estate Agents in NY..." 
+              placeholder="Ex: Car Dealerships in Florida..." 
               className="w-full p-4 bg-gray-900 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-red-500 transition-all"
             />
             <button 
@@ -63,8 +64,13 @@ export default function Home() {
               <div key={lead.id} className="bg-gray-900 p-4 rounded-lg mb-3 border-l-4 border-red-500 hover:bg-gray-700 transition-all">
                 <p className="font-bold text-lg">{lead.name}</p>
                 <p className="text-sm text-gray-400">{lead.email}</p>
+                <p className="text-xs text-red-400 mt-1">Verified Lead</p>
               </div>
             ))}
+            
+            {leads.length === 0 && !loading && query && (
+                <p className="text-center text-gray-500 mt-4">No results found. Try a different keyword.</p>
+            )}
           </div>
         </div>
       </main>
@@ -72,16 +78,20 @@ export default function Home() {
       {/* --- Floating Chat System --- */}
       <div className="fixed bottom-6 right-6 z-50">
         {isChatOpen && (
-          <div className="bg-white text-black w-72 h-96 rounded-2xl mb-4 shadow-2xl flex flex-col overflow-hidden border-2 border-red-600">
-            <div className="bg-red-600 p-4 text-white font-bold flex justify-between">
+          <div className="bg-white text-black w-72 h-96 rounded-2xl mb-4 shadow-2xl flex flex-col overflow-hidden border-2 border-red-600 animate-in fade-in zoom-in duration-200">
+            <div className="bg-red-600 p-4 text-white font-bold flex justify-between items-center">
               <span>AI Sales Assistant</span>
-              <button onClick={() => setIsChatOpen(false)}>✕</button>
+              <button onClick={() => setIsChatOpen(false)} className="hover:bg-red-700 rounded p-1">✕</button>
             </div>
             <div className="flex-1 p-4 text-sm overflow-y-auto bg-gray-50">
               <p className="bg-gray-200 p-2 rounded-lg mb-2">Hello! How can I help you grow your business today?</p>
             </div>
-            <div className="p-3 border-t">
-              <input type="text" placeholder="Type a message..." className="w-full p-2 text-sm border rounded-lg outline-none" />
+            <div className="p-3 border-t bg-white">
+              <input 
+                type="text" 
+                placeholder="Type your message..." 
+                className="w-full p-2 text-sm border rounded-lg outline-none focus:border-red-500" 
+              />
             </div>
           </div>
         )}
