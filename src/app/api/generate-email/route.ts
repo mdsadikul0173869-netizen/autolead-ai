@@ -1,59 +1,29 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { NextResponse } from "next/server";
-
-// ১. ডাটার জন্য একটি টাইপ ডিফাইন করা (টাইপস্ক্রিপ্টকে শান্ত করার জন্য)
-interface RequestBody {
-  businessName?: string;
-  category?: string;
-  location?: string;
-}
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  // ২. ভেরিয়েবলগুলোকে নিরাপদভাবে ডিফল্ট ভ্যালুসহ ডিফাইন করা
-  let bizName: string = "Valued Business";
-  let bizCat: string = "your niche";
-  let bizLoc: string = "your area";
-
   try {
-    const apiKey = "AIzaSyBvQNnnBi-Ep8DBDbcpdPxPb3ikl0nLHQc";
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // ৩. বডি রিড করার সময় টাইপ কাস্টিং করা
-    const body = (await req.json()) as RequestBody;
-    
-    bizName = body.businessName || bizName;
-    bizCat = body.category || bizCat;
-    bizLoc = body.location || bizLoc;
+    const { businessName, category, location } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Write a professional cold email for ${bizName} in ${bizCat} at ${bizLoc}. Keep it short.`;
+    // AI এর পরিবর্তে একটি সুন্দর প্রফেশনাল ডেমো মেসেজ
+    const demoEmail = `Subject: Business Proposal for ${businessName}
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+Hi ${businessName} Team,
 
-    return NextResponse.json({ 
-      email: text,
-      status: "Success"
-    });
+I noticed your impressive work in the ${category} industry in ${location}. 
 
-  } catch (error: any) {
-    console.error("Gemini Error:", error);
+We specialize in helping businesses like yours scale through high-quality lead generation and automated outreach systems. I would love to share how we can help you get more clients this month.
 
-    // ৪. ফলব্যাক ইমেইল লজিক (সব ভেরিয়েবল এখন এখানে কাজ করবে)
-    const fallbackEmail = `Subject: Strategic Growth for ${bizName}
-
-Hi Team, 
-I noticed your work in ${bizCat}. We help businesses like yours scale with AI. 
-Would you be open to a quick chat?
+Are you available for a quick 5-minute chat next week?
 
 Best regards,
-AutoLead Pro Team`;
+[Your Name]`;
 
-    return NextResponse.json({ 
-      email: fallbackEmail,
-      status: "Fallback",
-      error: error.message
-    });
+    // একটু সময় নিয়ে রেসপন্স পাঠানো যাতে মনে হয় AI প্রসেস করছে
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    return NextResponse.json({ email: demoEmail });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: "Failed to generate demo" }, { status: 500 });
   }
 }

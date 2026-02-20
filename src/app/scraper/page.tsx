@@ -1,137 +1,140 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Zap, Database, Mail, Sparkles } from 'lucide-react';
-import { supabase } from "@/lib/supabase";
-import { useUser } from "@clerk/nextjs";
+import { Search, MapPin, Loader2, Zap, Mail, Sparkles, ExternalLink, X, Copy } from 'lucide-react';
 
-export default function MockScraperPage() {
-  const { user } = useUser();
+export default function ScraperPage() {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
-  const [status, setStatus] = useState("");
-  const [isGenerating, setIsGenerating] = useState<number | null>(null);
+  
+  // এডিটিং এর জন্য নতুন স্টেট
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleMockSearch = async (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword || !location) return;
-
     setLoading(true);
-    setStatus("Connecting to AI Nodes...");
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setStatus(`Extracting ${keyword} in ${location}...`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const mockLeads = [
-      { name: `${keyword} Solution Ltd`, address: `123 Business Bay, ${location}`, phone: "+1 234 567 890", email: "contact@solution.com" },
-      { name: `Elite ${keyword} Group`, address: `456 Downtown St, ${location}`, phone: "+1 987 654 321", email: "info@elitegroup.com" },
-      { name: `The ${location} ${keyword} Co`, address: `789 Industrial Area, ${location}`, phone: "+1 555 010 999", email: "hello@theco.io" },
-    ];
-
-    setResults(mockLeads);
-    setStatus("Extraction Complete!");
-
     try {
-      const leadsWithUserId = mockLeads.map((lead: any) => ({
-        ...lead,
-        user_id: user?.id,
-        status: 'New',
-        category: keyword
-      }));
-      await supabase.from('leads').insert(leadsWithUserId);
-    } catch (err) { console.error(err); }
-    setLoading(false);
+      const response = await fetch('/api/scraper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, location }),
+      });
+      const data = await response.json();
+      setResults(data.leads || []);
+    } catch (err) {
+      alert("Search failed!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // --- MAGIC WRITE FUNCTION ---
-  const handleMagicWrite = async (index: number, leadName: string) => {
-    setIsGenerating(index);
+  const handleMagicWrite = async (leadName: string) => {
+    setIsGenerating(true);
+    setIsModalOpen(true);
+    setCurrentEmail("AI is writing your masterpiece... Please wait.");
+    
     try {
       const response = await fetch('/api/generate-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessName: leadName,
-          category: keyword,
-          location: location,
-          tone: "professional"
-        }),
+        body: JSON.stringify({ businessName: leadName, category: keyword, location }),
       });
-
       const data = await response.json();
-      
-      // ফলাফলটি একটি এলার্ট বক্সে দেখাচ্ছি (বায়ারকে ডেমো দেখানোর জন্য এটি যথেষ্ট)
-      alert(`AI GENERATED EMAIL FOR: ${leadName}\n\n${data.email}`);
-      
+      if (data.email) {
+        setCurrentEmail(data.email);
+      } else {
+        setCurrentEmail("Failed to generate. You can write your own message here.");
+      }
     } catch (error) {
-      alert("AI is busy, please try again.");
+      setCurrentEmail("Error occurred. Please type your email manually.");
     } finally {
-      setIsGenerating(null);
+      setIsGenerating(false);
     }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(currentEmail);
+    alert("Email copied to clipboard!");
   };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-12 flex justify-between items-end">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-               <div className="bg-red-600 p-2 rounded-xl"><Zap size={24}/></div>
-               <h1 className="text-4xl font-black uppercase italic tracking-tighter">AutoLead <span className="text-red-600">Pro</span></h1>
-            </div>
-            <p className="text-zinc-500 font-medium uppercase text-[10px] tracking-widest">Next-Gen Lead Extraction & AI Outreach</p>
-          </div>
-        </header>
+      <div className="max-w-5xl mx-auto">
+        {/* SEARCH FORM (সংক্ষিপ্ত) */}
+        <form onSubmit={handleSearch} className="bg-[#0A0A0A] p-8 rounded-[2rem] border border-white/5 mb-12 flex gap-4">
+          <input 
+            type="text" placeholder="Niche" value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-red-600"
+          />
+          <input 
+            type="text" placeholder="Location" value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl p-4 text-sm outline-none focus:border-red-600"
+          />
+          <button className="bg-red-600 px-8 rounded-xl font-bold uppercase text-[10px]">
+            {loading ? <Loader2 className="animate-spin" /> : "Scrape"}
+          </button>
+        </form>
 
-        {/* SEARCH FORM */}
-        <div className="bg-[#0A0A0A] p-10 rounded-[3rem] border border-white/5 shadow-2xl mb-10">
-          <form onSubmit={handleMockSearch} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <input 
-              type="text" placeholder="Niche (e.g. Dentists)" value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 focus:outline-none focus:border-red-600"
-            />
-            <input 
-              type="text" placeholder="Location (e.g. London)" value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 focus:outline-none focus:border-red-600"
-            />
-            <button disabled={loading} className="md:col-span-2 bg-white text-black font-black uppercase py-6 rounded-2xl hover:bg-red-600 hover:text-white transition-all">
-              {loading ? <Loader2 className="animate-spin mx-auto" /> : "Start Deep Extraction"}
-            </button>
-          </form>
-          {status && <div className="mt-6 text-center text-[10px] font-black uppercase text-red-500 tracking-widest">{status}</div>}
+        {/* RESULTS */}
+        <div className="space-y-4">
+          {results.map((lead, i) => (
+            <div key={i} className="p-6 bg-[#0A0A0A] border border-white/5 rounded-2xl flex justify-between items-center">
+              <div>
+                <h3 className="font-bold italic uppercase">{lead.name}</h3>
+                <p className="text-[10px] text-zinc-500">{lead.website}</p>
+              </div>
+              <button 
+                onClick={() => handleMagicWrite(lead.name)}
+                className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-600 transition-all"
+              >
+                <Sparkles size={14} /> Magic Write
+              </button>
+            </div>
+          ))}
         </div>
 
-        {/* RESULTS TABLE */}
-        {results.length > 0 && (
-          <div className="bg-[#0A0A0A] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
-            <div className="p-8 border-b border-white/5 bg-white/[0.01] flex justify-between items-center">
-              <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                <Database size={16} className="text-green-500" /> Extracted Prospects
-              </h3>
-            </div>
-            <div>
-              {results.map((lead, i) => (
-                <div key={i} className="p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 hover:bg-white/[0.02] transition-all">
-                  <div className="flex-1">
-                    <p className="text-lg font-black uppercase italic tracking-tight">{lead.name}</p>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">{lead.address}</p>
-                  </div>
-                  
-                  {/* MAGIC WRITE BUTTON */}
+        {/* --- EDITABLE MODAL (পপ-আপ উইন্ডো) --- */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-[#0F0F0F] border border-white/10 w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                  <Mail size={16} className="text-red-600" /> Edit Outreach Email
+                </h3>
+                <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
+              </div>
+              
+              <div className="p-6">
+                <textarea 
+                  value={currentEmail}
+                  onChange={(e) => setCurrentEmail(e.target.value)}
+                  className="w-full h-64 bg-black/40 border border-white/5 rounded-xl p-4 text-sm text-zinc-300 focus:outline-none focus:border-red-600/50 resize-none leading-relaxed"
+                  placeholder="Type or edit your email here..."
+                  disabled={isGenerating}
+                />
+                
+                <div className="mt-6 flex gap-3">
                   <button 
-                    onClick={() => handleMagicWrite(i, lead.name)}
-                    disabled={isGenerating !== null}
-                    className="flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-3 rounded-xl text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all disabled:opacity-50"
+                    onClick={copyToClipboard}
+                    className="flex-1 bg-white/5 border border-white/10 py-4 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-white/10 transition-all"
                   >
-                    {isGenerating === i ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                    Magic Write
+                    <Copy size={14} /> Copy to Clipboard
+                  </button>
+                  <button 
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 bg-red-600 py-4 rounded-xl text-[10px] font-black uppercase hover:bg-red-700 transition-all"
+                  >
+                    Save & Close
                   </button>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         )}
