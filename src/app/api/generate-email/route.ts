@@ -1,29 +1,80 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { auth } from "@clerk/nextjs/server"; 
+import { createClient } from "@supabase/supabase-js";
+
+// সুপাবেস ক্লায়েন্ট সেটআপ
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 export async function POST(req: Request) {
   try {
+    // ১. ক্লার্ক থেকে ইউজার আইডি চেক
+    const { userId } = await auth();
+    
+    // টার্মিনালে চেক করার জন্য (ডিবাগিং)
+    console.log("Current Logged-in User ID:", userId);
+
+    if (!userId) {
+      console.error("Clerk: No User ID found");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { businessName, category, location } = await req.json();
 
-    // AI এর পরিবর্তে একটি সুন্দর প্রফেশনাল ডেমো মেসেজ
-    const demoEmail = `Subject: Business Proposal for ${businessName}
+    // ২. প্রোফাইল থেকে ক্রেডিট চেক
+    const { data: profiles, error: dbError } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId) // আপনার ডাটাবেস অনুযায়ী 'id' কলামে userId চেক হচ্ছে
+      .limit(1);
 
-Hi ${businessName} Team,
+    // ডাটা না পাওয়ার এরর হ্যান্ডলিং
+    if (dbError || !profiles || profiles.length === 0) {
+      console.error("Supabase Error:", dbError?.message);
+      return NextResponse.json({ 
+        error: "No profile found!", 
+        details: dbError?.message,
+        triedId: userId 
+      }, { status: 403 });
+    }
 
-I noticed your impressive work in the ${category} industry in ${location}. 
+    const profile = profiles[0];
 
-We specialize in helping businesses like yours scale through high-quality lead generation and automated outreach systems. I would love to share how we can help you get more clients this month.
+    // ক্রেডিট চেক
+    if (profile.credits <= 0) {
+      return NextResponse.json({ error: "Insufficient credits" }, { status: 403 });
+    }
 
-Are you available for a quick 5-minute chat next week?
+    // ৩. AI জেনারেশন (আপনার এভেলেবল লেটেস্ট মডেল)
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || "");
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-Best regards,
-[Your Name]`;
+    const prompt = `Write a professional 2-line cold email for ${businessName} in ${location} regarding ${category} SEO. Offer a free audit. Start with Subject:`;
 
-    // একটু সময় নিয়ে রেসপন্স পাঠানো যাতে মনে হয় AI প্রসেস করছে
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-    return NextResponse.json({ email: demoEmail });
+    if (text) {
+      // ৪. সফল হলে ক্রেডিট ১ কমিয়ে দেওয়া
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credits: profile.credits - 1 })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error("Update Credit Error:", updateError.message);
+      }
+
+      return NextResponse.json({ email: text });
+    } else {
+      throw new Error("AI returned empty text");
+    }
 
   } catch (error: any) {
-    return NextResponse.json({ error: "Failed to generate demo" }, { status: 500 });
+    console.error("FULL ERROR LOG:", error.message);
+    return NextResponse.json({ error: error.message || "Server Error" }, { status: 500 });
   }
 }

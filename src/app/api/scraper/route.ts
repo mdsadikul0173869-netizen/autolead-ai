@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({ 
         q: query,
-        num: 50 // এখানে রেজাল্ট সংখ্যা বাড়িয়ে ২০ থেকে ৫০ করা হলো
+        num: 20    
       }),
     });
 

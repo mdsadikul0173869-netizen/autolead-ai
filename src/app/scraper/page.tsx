@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Search, MapPin, Loader2, Zap, Mail, Sparkles, X, Copy, Database } from 'lucide-react';
+import React, { useState } from 'react'; 
+import { Search, MapPin, Loader2, Zap, Mail, Sparkles, X, Copy, Database } from 'lucide-react'; 
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@clerk/nextjs";
 
@@ -21,8 +21,9 @@ export default function ScraperPage() {
     setLoading(true);
     setResults([]);
 
+    // ক্রেডিট চেক এবং ক্রেডিট কমানোর লজিক পুরোপুরি সরিয়ে দেওয়া হয়েছে
+
     try {
-      // ১. স্ক্র্যাপার ইঞ্জিন কল
       const response = await fetch('/api/scraper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +38,6 @@ export default function ScraperPage() {
         let enrichedEmail = "Searching...";
         let statusText = "Pending";
 
-        // ২. ইমেইল ফাইন্ডার কল (যদি ওয়েবসাইট থাকে)
         if (lead.website && lead.website !== "") {
           try {
             const enrichRes = await fetch('/api/enrich-lead', {
@@ -46,13 +46,8 @@ export default function ScraperPage() {
               body: JSON.stringify({ website: lead.website, businessName: lead.name }),
             });
             const enrichedData = await enrichRes.json();
-            if (enrichedData.email) {
-              enrichedEmail = enrichedData.email;
-              statusText = "Enriched";
-            } else {
-              enrichedEmail = "N/A";
-              statusText = "Not Found";
-            }
+            enrichedEmail = enrichedData.email || "N/A";
+            statusText = enrichedData.email ? "Enriched" : "Not Found";
           } catch (err) {
             enrichedEmail = "N/A";
           }
@@ -61,7 +56,6 @@ export default function ScraperPage() {
           statusText = "No Website";
         }
 
-        // ৩. সুপাবেস (Supabase) এ ডাটা সেভ - একদম নিখুঁত কলাম ম্যাপিং
         const finalLeadData = {
           user_id: user.id,
           name: lead.name || "Unknown Business",
@@ -71,23 +65,20 @@ export default function ScraperPage() {
           address: lead.address || location,
           category: keyword,
           status: statusText,
-          // rating এবং reviews কলাম ফিক্স - Number এ কনভার্ট করা হয়েছে
           rating: lead.rating ? Number(lead.rating) : 0,
           reviews: lead.reviews ? Number(lead.reviews) : 0,
           created_at: new Date().toISOString(),
         };
 
+        // ডাটাবেসে সেভ করা হচ্ছে
         const { error: dbError } = await supabase
           .from('leads')
           .insert([finalLeadData]);
 
-        if (dbError) {
-          console.error("Database error for", lead.name, ":", dbError.message);
+        if (!dbError) {
+          processedLeads.push(finalLeadData);
+          setResults([...processedLeads]);
         }
-
-        // রিয়েল-টাইম স্ক্রিনে দেখানোর জন্য
-        processedLeads.push(finalLeadData);
-        setResults([...processedLeads]); 
       }
 
     } catch (err) {
@@ -121,7 +112,7 @@ export default function ScraperPage() {
     <div className="min-h-screen bg-[#050505] text-white p-8">
       <div className="max-w-5xl mx-auto">
         
-        <div className="mb-10 text-center md:text-left">
+        <div className="mb-10">
           <h1 className="text-4xl font-black uppercase italic tracking-tighter">Lead <span className="text-red-600">Extraction</span></h1>
           <p className="text-zinc-500 text-sm mt-2 font-bold uppercase tracking-widest">Find, Enrich, and Save leads automatically.</p>
         </div>
@@ -171,7 +162,6 @@ export default function ScraperPage() {
           )}
         </div>
 
-        {/* --- AI EMAIL MODAL --- */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex items-center justify-center p-4">
             <div className="bg-[#0F0F0F] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">

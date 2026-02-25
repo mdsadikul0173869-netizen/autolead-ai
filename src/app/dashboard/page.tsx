@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Users, Zap, Target, Mail, ArrowUpRight, 
-  BarChart3, LayoutDashboard, Settings, LogOut, Search
+  BarChart3, LayoutDashboard, Settings, LogOut, Search, Shield
 } from 'lucide-react';
 import { 
   XAxis, YAxis, CartesianGrid, 
@@ -12,9 +12,12 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { supabase } from "@/lib/supabase";
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function MasterDashboard() {
   const { user } = useUser();
+  const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     contacted: 0,
@@ -24,12 +27,32 @@ export default function MasterDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) fetchRealtimeStats();
+    if (user) {
+      fetchRealtimeStats();
+      checkAdminStatus();
+    }
   }, [user]);
+
+  // অ্যাডমিন কিনা তা চেক করার ফাংশন
+ const checkAdminStatus = async () => {
+    if (!user) return;
+    console.log("Checking admin status for:", user.id); // চেক করার জন্য
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle(); // single() এর বদলে এটি ব্যবহার করুন
+    
+    console.log("Admin Data from Supabase:", data); // এখানে কি 'is_admin: true' দেখাচ্ছে?
+    console.log("State isAdmin is now:", isAdmin);
+    if (data?.is_admin) {
+      setIsAdmin(true);
+    }
+  };
 
   const fetchRealtimeStats = async () => {
     try {
-      // Fetch all leads for this user
       const { data: leads } = await supabase
         .from('leads')
         .select('*')
@@ -39,7 +62,6 @@ export default function MasterDashboard() {
         const total = leads.length;
         const contacted = leads.filter(l => l.status === 'Contacted').length;
         
-        // Group data for the chart (Simple Logic: counting by day)
         const chartMap = leads.reduce((acc: any, curr: any) => {
           const date = new Date(curr.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           acc[date] = (acc[date] || 0) + 1;
@@ -49,7 +71,7 @@ export default function MasterDashboard() {
         const chartData = Object.keys(chartMap).map(date => ({
           name: date,
           leads: chartMap[date]
-        })).slice(-7); // Last 7 data points
+        })).slice(-7);
 
         setStats({
           total,
@@ -66,7 +88,7 @@ export default function MasterDashboard() {
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
       
-      {/* SIDEBAR - BRD Section 2 (Modular Layout) */}
+      {/* SIDEBAR */}
       <aside className="w-64 border-r border-white/5 bg-[#0A0A0A] hidden md:flex flex-col p-6 fixed h-full">
         <div className="flex items-center gap-2 mb-12">
           <div className="bg-red-600 p-2 rounded-lg shadow-lg shadow-red-600/20"><Zap size={20}/></div>
@@ -74,10 +96,21 @@ export default function MasterDashboard() {
         </div>
         
         <nav className="space-y-2 flex-1">
-          <Link href="/"><NavItem icon={<LayoutDashboard size={18}/>} label="Overview" active /></Link>
-          <Link href="/scraper"><NavItem icon={<Search size={18}/>} label="Scraper Engine" /></Link>
-          <Link href="/my-leads"><NavItem icon={<Users size={18}/>} label="Lead Database" /></Link>
-          <Link href="/settings"><NavItem icon={<Settings size={18}/>} label="SMTP Config" /></Link>
+          <Link href="/"><NavItem icon={<LayoutDashboard size={18}/>} label="Overview" active={pathname === '/'} /></Link>
+          <Link href="/scraper"><NavItem icon={<Search size={18}/>} label="Scraper Engine" active={pathname === '/scraper'} /></Link>
+          <Link href="/my-leads"><NavItem icon={<Users size={18}/>} label="Lead Database" active={pathname === '/my-leads'} /></Link>
+          <Link href="/settings"><NavItem icon={<Settings size={18}/>} label="SMTP Config" active={pathname === '/settings'} /></Link>
+          
+          {/* Admin Panel Link - Only visible to Admins */}
+          {isAdmin && (
+            <Link href="/admin">
+              <NavItem 
+                icon={<Shield size={18} className="text-red-500"/>} 
+                label="Admin Panel" 
+                active={pathname === '/admin'} 
+              />
+            </Link>
+          )}
         </nav>
 
         <div className="pt-6 border-t border-white/5 opacity-50">
@@ -87,8 +120,6 @@ export default function MasterDashboard() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 md:ml-64 p-8 overflow-y-auto">
-        
-        {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
             <h1 className="text-3xl font-black uppercase italic tracking-tighter">System <span className="text-red-600">Analytics</span></h1>
@@ -133,7 +164,6 @@ export default function MasterDashboard() {
             </div>
           </div>
 
-          {/* QUICK LINKS */}
           <div className="bg-[#0A0A0A] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl flex flex-col justify-between">
             <div>
               <h3 className="text-lg font-black uppercase italic mb-6">Quick Actions</h3>
@@ -189,5 +219,5 @@ function NavItem({ icon, label, active = false }: any) {
       {icon}
       <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </div>
-  );
+    );
 }
