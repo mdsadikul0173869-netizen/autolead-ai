@@ -1,17 +1,11 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  /* ইএস-লিন্ট বা টাইপস্ক্রিপ্ট এরর বিল্ডের সময় ইগনোর করার জন্য */
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  /* পিডব্লিউএ বা বড় ফাইলের জন্য মেমোরি ফিক্স */
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // আপনার অন্যান্য কনফিগ
   webpack: (config: any) => {
     config.cache = false;
     return config;
   },
-};
+} as any; // এই অংশটি টাইপস্ক্রিপ্ট চেক বাইপাস করবে
 
 export default nextConfig;
