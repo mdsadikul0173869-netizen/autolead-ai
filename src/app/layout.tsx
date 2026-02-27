@@ -6,7 +6,6 @@ import type { Metadata, Viewport } from "next"; // টাইপ ইমপোর�
 export const metadata: Metadata = {
   title: "AutoLead AI Pro",
   description: "AI-Powered SEO Cold Outreach Engine",
-  manifest: "/manifest.json", // PWA এর জন্য এটি জরুরি
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

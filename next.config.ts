@@ -1,16 +1,7 @@
-// @ts-nocheck
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  webpack: (config) => {
-    config.cache = false;
-    return config;
-  },
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* আপনার আগের যদি কোনো বিশেষ কনফিগ থেকে থাকে শুধু সেগুলো এখানে দিন */
 };
 
 export default nextConfig;
